@@ -90,6 +90,45 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
     return () => stopAmbient();
   }, [playing, musicEnabled]);
 
+  // Idle background animation (when not playing)
+  useEffect(() => {
+    if (playing) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Create idle background state
+    const idleStars: any[] = [];
+    const idleStreaks: any[] = [];
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = canvas.width / dpr;
+    const h = canvas.height / dpr;
+    for (let i = 0; i < 80; i++) {
+      idleStars.push({ x: Math.random() * w, y: Math.random() * h, size: Math.random() * 1.5 + 0.5, speed: Math.random() * 0.5 + 0.1, brightness: Math.random() * 0.6 + 0.2 });
+    }
+    for (let i = 0; i < 6; i++) {
+      idleStreaks.push({ x: Math.random() * w, y: Math.random() * h, length: Math.random() * 100 + 50, speed: Math.random() * 1.5 + 0.5, alpha: Math.random() * 0.15 + 0.05, hue: Math.random() * 60 + 180 });
+    }
+    let frame = 0;
+
+    const loop = () => {
+      const dpr2 = Math.min(window.devicePixelRatio || 1, 2);
+      const cw = canvas.width / dpr2;
+      const ch = canvas.height / dpr2;
+      frame++;
+      drawBackground(ctx, cw, ch, themeColors, frame);
+      for (const s of idleStars) { s.x -= s.speed * 0.3; if (s.x < 0) s.x = cw; }
+      for (const s of idleStreaks) { s.x -= s.speed * 0.3; if (s.x + s.length < 0) { s.x = cw; s.y = Math.random() * ch; } }
+      drawStars(ctx, idleStars, frame);
+      drawLightStreaks(ctx, idleStreaks);
+      drawVignette(ctx, cw, ch);
+      animRef.current = requestAnimationFrame(loop);
+    };
+    animRef.current = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(animRef.current);
+  }, [playing, themeColors]);
+
   // Game loop
   useEffect(() => {
     if (!playing) return;
@@ -134,7 +173,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
         }
         onAchievementCheck(result, st);
       } else if (!st.isAlive && st.slowMotionTimer > 0) {
-        // Continue slow-mo death animation
         const result = updateFrame(st, w, h, difficulty, theme);
         void result;
       }
@@ -166,10 +204,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.globalAlpha = 0.5 + 0.3 * Math.sin(st.frameCount * 0.05);
         ctx.fillText('TAP OR PRESS SPACE TO START', w / 2, h / 2 + 60);
         ctx.globalAlpha = 1;
-        // Idle animation
         st.drone.y = h / 2 + Math.sin(st.frameCount * 0.03) * 15;
         st.frameCount++;
-        // Update background
         for (const s of st.stars) { s.x -= s.speed * 0.3; if (s.x < 0) s.x = w; }
         for (const s of st.lightStreaks) { s.x -= s.speed * 0.3; if (s.x + s.length < 0) { s.x = w; s.y = Math.random() * h; } }
       }
