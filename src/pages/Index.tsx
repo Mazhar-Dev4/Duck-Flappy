@@ -122,11 +122,11 @@ const Index = () => {
 
   return (
     <div className="relative w-screen h-screen overflow-hidden select-none" style={{ background: '#0a0a1a' }}>
-      {/* Background canvas always running */}
+      {/* Game canvas */}
       <GameCanvas
         difficulty={settings.difficulty}
         theme={settings.theme}
-        soundEnabled={settings.soundEnabled}
+        soundEnabled={settings.soundEnabled && screen === 'playing'}
         musicEnabled={settings.musicEnabled && screen === 'playing'}
         onScore={handleScore}
         onDeath={handleDeath}
@@ -134,7 +134,7 @@ const Index = () => {
         playing={screen === 'playing'}
       />
 
-      {/* Home screen background canvas */}
+      {/* Ambient background canvas for menus */}
       {screen !== 'playing' && screen !== 'gameover' && (
         <GameCanvas
           difficulty="easy"
