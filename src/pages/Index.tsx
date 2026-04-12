@@ -134,19 +134,6 @@ const Index = () => {
         playing={screen === 'playing'}
       />
 
-      {/* Ambient background canvas for menus */}
-      {screen !== 'playing' && screen !== 'gameover' && (
-        <GameCanvas
-          difficulty="easy"
-          theme={settings.theme}
-          soundEnabled={false}
-          musicEnabled={false}
-          onScore={() => {}}
-          onDeath={() => {}}
-          onAchievementCheck={() => {}}
-          playing={false}
-        />
-      )}
 
       {/* HUD */}
       {screen === 'playing' && (
