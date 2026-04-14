@@ -1,5 +1,5 @@
 export type Difficulty = 'easy' | 'medium' | 'hard';
-export type GameScreen = 'home' | 'playing' | 'gameover' | 'settings' | 'leaderboard';
+export type GameScreen = 'home' | 'playing' | 'gameover' | 'levelComplete' | 'settings' | 'leaderboard' | 'rewards';
 export type ObstacleType = 'standard' | 'pulse' | 'moving' | 'rotating' | 'bonus' | 'narrow';
 
 export interface DifficultyConfig {
@@ -41,6 +41,26 @@ export interface LightStreak {
   hue: number;
 }
 
+export interface Nebula {
+  x: number;
+  y: number;
+  radius: number;
+  hue: number;
+  alpha: number;
+  speed: number;
+}
+
+export interface Planet {
+  x: number;
+  y: number;
+  radius: number;
+  hue: number;
+  saturation: number;
+  ringAngle: number;
+  hasRing: boolean;
+  speed: number;
+}
+
 export interface Obstacle {
   x: number;
   gapY: number;
@@ -54,27 +74,32 @@ export interface Obstacle {
   entryProgress: number;
 }
 
-export interface Drone {
+export interface Duck {
   x: number;
   y: number;
   velocity: number;
   rotation: number;
-  wingPhase: number;
+  flapFrame: number; // 0-2 for 3-frame flap
+  flapTimer: number;
   trailPoints: { x: number; y: number; alpha: number }[];
-  enginePulse: number;
+  squash: number; // squash/stretch factor
+  sparkles: { x: number; y: number; life: number; size: number }[];
 }
 
 export interface GameState {
-  drone: Drone;
+  duck: Duck;
   obstacles: Obstacle[];
   particles: Particle[];
   stars: Star[];
   lightStreaks: LightStreak[];
+  nebulae: Nebula[];
+  planets: Planet[];
   score: number;
   bestScore: number;
   streak: number;
   bestStreak: number;
   perfectPasses: number;
+  coins: number;
   distance: number;
   frameCount: number;
   shakeAmount: number;
@@ -87,6 +112,9 @@ export interface GameState {
   nearMissTimer: number;
   scorePopTimer: number;
   newRecord: boolean;
+  level: number;
+  levelProgress: number; // gates passed toward current level target
+  levelTarget: number;   // gates needed to complete this level
 }
 
 export interface LeaderboardEntry {
@@ -96,6 +124,7 @@ export interface LeaderboardEntry {
   date: string;
   perfectPasses: number;
   streak: number;
+  level: number;
 }
 
 export interface Achievement {
@@ -106,10 +135,35 @@ export interface Achievement {
   unlocked: boolean;
 }
 
+export interface DuckSkin {
+  id: string;
+  name: string;
+  bodyColor: string;
+  beakColor: string;
+  eyeColor: string;
+  glowColor: string;
+  unlockLevel: number;
+  description: string;
+}
+
+export interface SpaceTheme {
+  id: string;
+  name: string;
+  bg1: string;
+  bg2: string;
+  nebulaHue: number;
+  accentColor: string;
+  starColor: string;
+  obstacleColor: string;
+  obstacleGlow: string;
+  unlockLevel: number;
+}
+
 export interface GameSettings {
   soundEnabled: boolean;
   musicEnabled: boolean;
   difficulty: Difficulty;
-  theme: 'cyber' | 'neon' | 'void';
+  theme: string;
+  skin: string;
   quality: 'low' | 'high';
 }

@@ -8,7 +8,7 @@ function getCtx(): AudioContext {
   return audioCtx;
 }
 
-function playTone(freq: number, duration: number, type: OscillatorType = 'sine', vol = 0.15, detune = 0) {
+function playTone(freq: number, duration: number, type: OscillatorType = 'sine', vol = 0.12, detune = 0) {
   try {
     const ctx = getCtx();
     const osc = ctx.createOscillator();
@@ -24,7 +24,7 @@ function playTone(freq: number, duration: number, type: OscillatorType = 'sine',
   } catch {}
 }
 
-function playNoise(duration: number, vol = 0.08) {
+function playNoise(duration: number, vol = 0.06) {
   try {
     const ctx = getCtx();
     const bufferSize = ctx.sampleRate * duration;
@@ -46,50 +46,60 @@ function playNoise(duration: number, vol = 0.08) {
 
 export const sounds = {
   flap: () => {
-    playTone(400, 0.08, 'sine', 0.1);
-    playTone(600, 0.06, 'sine', 0.06, 5);
+    // Cute quack-like: quick pitch bend
+    playTone(500, 0.06, 'sine', 0.08);
+    playTone(650, 0.05, 'triangle', 0.05, 10);
   },
   score: () => {
-    playTone(880, 0.1, 'sine', 0.12);
-    setTimeout(() => playTone(1100, 0.15, 'sine', 0.1), 60);
+    playTone(800, 0.08, 'sine', 0.1);
+    setTimeout(() => playTone(1000, 0.1, 'sine', 0.08), 50);
   },
   perfectPass: () => {
-    playTone(880, 0.08, 'sine', 0.1);
-    setTimeout(() => playTone(1100, 0.08, 'sine', 0.1), 50);
-    setTimeout(() => playTone(1320, 0.15, 'sine', 0.1), 100);
+    playTone(800, 0.06, 'sine', 0.08);
+    setTimeout(() => playTone(1000, 0.06, 'sine', 0.08), 40);
+    setTimeout(() => playTone(1200, 0.1, 'sine', 0.08), 80);
   },
   nearMiss: () => {
-    playTone(660, 0.06, 'triangle', 0.08);
-    playTone(990, 0.1, 'triangle', 0.06);
+    playTone(600, 0.05, 'triangle', 0.06);
+    playTone(900, 0.08, 'triangle', 0.04);
   },
   streak: () => {
-    playTone(700, 0.05, 'square', 0.06);
-    setTimeout(() => playTone(900, 0.05, 'square', 0.06), 40);
-    setTimeout(() => playTone(1200, 0.08, 'square', 0.06), 80);
+    playTone(700, 0.04, 'sine', 0.06);
+    setTimeout(() => playTone(900, 0.04, 'sine', 0.06), 35);
+    setTimeout(() => playTone(1100, 0.06, 'sine', 0.06), 70);
   },
   collision: () => {
-    playNoise(0.3, 0.15);
-    playTone(150, 0.3, 'sawtooth', 0.12);
-    playTone(80, 0.4, 'sine', 0.1);
+    playNoise(0.2, 0.1);
+    playTone(200, 0.25, 'sine', 0.08);
   },
   menuClick: () => {
-    playTone(800, 0.04, 'sine', 0.08);
+    playTone(700, 0.03, 'sine', 0.06);
   },
   gameOver: () => {
-    playTone(400, 0.2, 'sawtooth', 0.08);
-    setTimeout(() => playTone(300, 0.2, 'sawtooth', 0.08), 150);
-    setTimeout(() => playTone(200, 0.4, 'sawtooth', 0.06), 300);
+    playTone(350, 0.15, 'sine', 0.06);
+    setTimeout(() => playTone(280, 0.15, 'sine', 0.06), 120);
+    setTimeout(() => playTone(200, 0.3, 'sine', 0.05), 240);
   },
   achievement: () => {
-    playTone(660, 0.1, 'sine', 0.1);
-    setTimeout(() => playTone(880, 0.1, 'sine', 0.1), 100);
-    setTimeout(() => playTone(1100, 0.15, 'sine', 0.1), 200);
-    setTimeout(() => playTone(1320, 0.2, 'sine', 0.12), 300);
+    playTone(660, 0.08, 'sine', 0.08);
+    setTimeout(() => playTone(880, 0.08, 'sine', 0.08), 80);
+    setTimeout(() => playTone(1100, 0.1, 'sine', 0.08), 160);
+    setTimeout(() => playTone(1320, 0.15, 'sine', 0.1), 240);
   },
   bonusGate: () => {
-    playTone(1000, 0.08, 'sine', 0.1);
-    setTimeout(() => playTone(1200, 0.08, 'sine', 0.1), 60);
-    setTimeout(() => playTone(1500, 0.12, 'sine', 0.12), 120);
+    playTone(900, 0.06, 'sine', 0.08);
+    setTimeout(() => playTone(1100, 0.06, 'sine', 0.08), 50);
+    setTimeout(() => playTone(1400, 0.1, 'sine', 0.1), 100);
+  },
+  levelComplete: () => {
+    playTone(600, 0.1, 'sine', 0.1);
+    setTimeout(() => playTone(800, 0.1, 'sine', 0.1), 100);
+    setTimeout(() => playTone(1000, 0.1, 'sine', 0.1), 200);
+    setTimeout(() => playTone(1200, 0.15, 'sine', 0.12), 300);
+    setTimeout(() => playTone(1400, 0.2, 'sine', 0.1), 400);
+  },
+  coinCollect: () => {
+    playTone(1200, 0.05, 'sine', 0.06);
   },
 };
 
@@ -103,11 +113,11 @@ export function startAmbient() {
     ambientOsc = ctx.createOscillator();
     ambientGain = ctx.createGain();
     ambientOsc.type = 'sine';
-    ambientOsc.frequency.value = 55;
-    ambientGain.gain.value = 0.03;
+    ambientOsc.frequency.value = 50;
+    ambientGain.gain.value = 0.02;
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
-    filter.frequency.value = 200;
+    filter.frequency.value = 150;
     ambientOsc.connect(filter).connect(ambientGain).connect(ctx.destination);
     ambientOsc.start();
   } catch {}
