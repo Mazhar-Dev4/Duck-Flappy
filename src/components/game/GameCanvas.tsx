@@ -1,57 +1,65 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { GameState, Difficulty } from '@/game/types';
-import { THEMES } from '@/game/constants';
+import { SPACE_THEMES, DUCK_SKINS } from '@/game/constants';
 import { createInitialState, updateFrame, flap, spawnParticles, FrameResult } from '@/game/engine';
 import {
-  drawBackground, drawStars, drawLightStreaks, drawDrone,
-  drawTrail, drawObstacle, drawParticles, drawVignette,
+  drawBackground, drawStars, drawLightStreaks, drawNebulae, drawPlanets,
+  drawDuck, drawTrail, drawObstacle, drawParticles, drawVignette,
+  getTheme, getSkin,
 } from '@/game/renderer';
 import { sounds, startAmbient, stopAmbient } from '@/game/audio';
-import { getBestScore, setBestScore } from '@/game/storage';
+import { getBestScore, setBestScore, setBestLevel } from '@/game/storage';
 
 interface GameCanvasProps {
   difficulty: Difficulty;
   theme: string;
+  skin: string;
   soundEnabled: boolean;
   musicEnabled: boolean;
-  onScore: (score: number, streak: number, perfectPasses: number) => void;
+  onScore: (score: number, streak: number, perfectPasses: number, coins: number) => void;
   onDeath: (state: GameState) => void;
+  onLevelComplete: (state: GameState) => void;
   onAchievementCheck: (result: FrameResult, state: GameState) => void;
   playing: boolean;
+  level: number;
 }
 
 const GameCanvas: React.FC<GameCanvasProps> = ({
-  difficulty, theme, soundEnabled, musicEnabled,
-  onScore, onDeath, onAchievementCheck, playing,
+  difficulty, theme, skin, soundEnabled, musicEnabled,
+  onScore, onDeath, onLevelComplete, onAchievementCheck, playing, level,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef<GameState | null>(null);
   const animRef = useRef<number>(0);
   const deadCallbackDone = useRef(false);
+  const levelCompleteDone = useRef(false);
   const [started, setStarted] = useState(false);
 
-  const themeColors = THEMES[theme as keyof typeof THEMES] || THEMES.cyber;
+  const themeData = getTheme(theme);
+  const skinData = getSkin(skin);
 
   const initGame = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const w = canvas.width;
-    const h = canvas.height;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = canvas.width / dpr;
+    const h = canvas.height / dpr;
     const best = getBestScore(difficulty);
-    stateRef.current = createInitialState(w, h, best);
+    stateRef.current = createInitialState(w, h, best, level);
     deadCallbackDone.current = false;
+    levelCompleteDone.current = false;
     setStarted(false);
-  }, [difficulty]);
+  }, [difficulty, level]);
 
   const handleFlap = useCallback(() => {
     const st = stateRef.current;
     if (!st || !st.isAlive) return;
     if (!started) setStarted(true);
-    flap(st.drone, difficulty);
+    flap(st.duck, difficulty);
     if (soundEnabled) sounds.flap();
   }, [difficulty, soundEnabled, started]);
 
-  // Input handlers
+  // Input
   useEffect(() => {
     if (!playing) return;
     const onKey = (e: KeyboardEvent) => {
@@ -78,7 +86,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
     return () => window.removeEventListener('resize', resize);
   }, []);
 
-  // Init game state
+  // Init
   useEffect(() => {
     if (playing) initGame();
   }, [playing, initGame]);
@@ -90,7 +98,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
     return () => stopAmbient();
   }, [playing, musicEnabled]);
 
-  // Idle background animation (when not playing)
+  // Idle background
   useEffect(() => {
     if (playing) return;
     const canvas = canvasRef.current;
@@ -98,18 +106,19 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Create idle background state
-    const idleStars: any[] = [];
-    const idleStreaks: any[] = [];
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const w = canvas.width / dpr;
     const h = canvas.height / dpr;
-    for (let i = 0; i < 80; i++) {
-      idleStars.push({ x: Math.random() * w, y: Math.random() * h, size: Math.random() * 1.5 + 0.5, speed: Math.random() * 0.5 + 0.1, brightness: Math.random() * 0.6 + 0.2 });
-    }
-    for (let i = 0; i < 6; i++) {
-      idleStreaks.push({ x: Math.random() * w, y: Math.random() * h, length: Math.random() * 100 + 50, speed: Math.random() * 1.5 + 0.5, alpha: Math.random() * 0.15 + 0.05, hue: Math.random() * 60 + 180 });
-    }
+    const idleStars = Array.from({ length: 100 }, () => ({
+      x: Math.random() * w, y: Math.random() * h,
+      size: Math.random() * 2 + 0.3, speed: Math.random() * 0.3 + 0.05,
+      brightness: Math.random() * 0.7 + 0.2,
+    }));
+    const idleNebulae = Array.from({ length: 3 }, () => ({
+      x: Math.random() * w, y: Math.random() * h,
+      radius: 80 + Math.random() * 120, hue: 250 + Math.random() * 80,
+      alpha: 0.04 + Math.random() * 0.04, speed: 0.05,
+    }));
     let frame = 0;
 
     const loop = () => {
@@ -117,17 +126,16 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
       const cw = canvas.width / dpr2;
       const ch = canvas.height / dpr2;
       frame++;
-      drawBackground(ctx, cw, ch, themeColors, frame);
-      for (const s of idleStars) { s.x -= s.speed * 0.3; if (s.x < 0) s.x = cw; }
-      for (const s of idleStreaks) { s.x -= s.speed * 0.3; if (s.x + s.length < 0) { s.x = cw; s.y = Math.random() * ch; } }
+      drawBackground(ctx, cw, ch, themeData, frame);
+      drawNebulae(ctx, idleNebulae, frame);
+      for (const s of idleStars) { s.x -= s.speed * 0.2; if (s.x < 0) s.x = cw; }
       drawStars(ctx, idleStars, frame);
-      drawLightStreaks(ctx, idleStreaks);
       drawVignette(ctx, cw, ch);
       animRef.current = requestAnimationFrame(loop);
     };
     animRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animRef.current);
-  }, [playing, themeColors]);
+  }, [playing, themeData]);
 
   // Game loop
   useEffect(() => {
@@ -147,96 +155,91 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
 
       ctx.save();
 
-      // Screen shake
       if (st.shakeAmount > 0.5) {
         const sx = (Math.random() - 0.5) * st.shakeAmount;
         const sy = (Math.random() - 0.5) * st.shakeAmount;
         ctx.translate(sx, sy);
       }
 
-      // Update
       if (started && st.isAlive) {
         const result = updateFrame(st, w, h, difficulty, theme);
         if (result.scored) {
-          onScore(st.score, st.streak, st.perfectPasses);
+          onScore(st.score, st.streak, st.perfectPasses, st.coins);
           if (soundEnabled) {
             if (result.perfectPass) sounds.perfectPass();
             else if (result.bonusGate) sounds.bonusGate();
             else sounds.score();
+            if (result.coinsEarned > 0) sounds.coinCollect();
             if (st.streak > 0 && st.streak % 5 === 0) sounds.streak();
           }
         }
         if (result.nearMiss && soundEnabled) sounds.nearMiss();
+        if (result.levelCompleted && !levelCompleteDone.current) {
+          levelCompleteDone.current = true;
+          if (soundEnabled) sounds.levelComplete();
+          setBestLevel(difficulty, st.level);
+          setTimeout(() => onLevelComplete(st), 500);
+        }
         if (result.died) {
           if (soundEnabled) sounds.collision();
-          setTimeout(() => { if (soundEnabled) sounds.gameOver(); }, 400);
+          setTimeout(() => { if (soundEnabled) sounds.gameOver(); }, 300);
         }
         onAchievementCheck(result, st);
       } else if (!st.isAlive && st.slowMotionTimer > 0) {
-        const result = updateFrame(st, w, h, difficulty, theme);
-        void result;
+        updateFrame(st, w, h, difficulty, theme);
       }
 
-      // Handle death callback after slow-mo
       if (!st.isAlive && st.slowMotionTimer <= 0 && !deadCallbackDone.current) {
         deadCallbackDone.current = true;
         setBestScore(difficulty, st.score);
+        setBestLevel(difficulty, st.level);
         setTimeout(() => onDeath(st), 300);
       }
 
       // Draw
-      drawBackground(ctx, w, h, themeColors, st.frameCount);
+      drawBackground(ctx, w, h, themeData, st.frameCount);
+      drawNebulae(ctx, st.nebulae, st.frameCount);
+      drawPlanets(ctx, st.planets, st.frameCount);
       drawStars(ctx, st.stars, st.frameCount);
       drawLightStreaks(ctx, st.lightStreaks);
       for (const obs of st.obstacles) {
-        drawObstacle(ctx, obs, h, themeColors, st.frameCount);
+        drawObstacle(ctx, obs, h, themeData, st.frameCount);
       }
-      drawTrail(ctx, st.drone, themeColors);
-      drawDrone(ctx, st.drone, themeColors, st.frameCount);
+      drawTrail(ctx, st.duck, skinData);
+      drawDuck(ctx, st.duck, skinData, st.frameCount);
       drawParticles(ctx, st.particles);
       drawVignette(ctx, w, h);
 
-      // "Tap to start" text
+      // Tap to start
       if (!started && st.isAlive) {
-        ctx.fillStyle = themeColors.text;
-        ctx.font = '600 16px system-ui, sans-serif';
+        ctx.fillStyle = '#e0e7ff';
+        ctx.font = '600 15px system-ui, sans-serif';
         ctx.textAlign = 'center';
-        ctx.globalAlpha = 0.5 + 0.3 * Math.sin(st.frameCount * 0.05);
-        ctx.fillText('TAP OR PRESS SPACE TO START', w / 2, h / 2 + 60);
+        ctx.globalAlpha = 0.5 + 0.3 * Math.sin(st.frameCount * 0.04);
+        ctx.fillText('TAP OR PRESS SPACE TO FLY', w / 2, h / 2 + 70);
         ctx.globalAlpha = 1;
-        st.drone.y = h / 2 + Math.sin(st.frameCount * 0.03) * 15;
+        st.duck.y = h / 2 + Math.sin(st.frameCount * 0.025) * 12;
+        st.duck.flapTimer += 1;
+        if (st.duck.flapTimer > 8) { st.duck.flapTimer = 0; st.duck.flapFrame = (st.duck.flapFrame + 1) % 3; }
         st.frameCount++;
-        for (const s of st.stars) { s.x -= s.speed * 0.3; if (s.x < 0) s.x = w; }
-        for (const s of st.lightStreaks) { s.x -= s.speed * 0.3; if (s.x + s.length < 0) { s.x = w; s.y = Math.random() * h; } }
+        for (const s of st.stars) { s.x -= s.speed * 0.2; if (s.x < 0) s.x = w; }
+        for (const n of st.nebulae) { n.x -= n.speed * 0.1; if (n.x + n.radius < -50) { n.x = w + n.radius; } }
       }
 
       // Death flash
-      if (!st.isAlive && st.slowMotionTimer > 15) {
-        ctx.fillStyle = `rgba(255,255,255,${(st.slowMotionTimer - 15) / 60})`;
+      if (!st.isAlive && st.slowMotionTimer > 12) {
+        ctx.fillStyle = `rgba(255,255,255,${(st.slowMotionTimer - 12) / 50})`;
         ctx.fillRect(0, 0, w, h);
       }
 
-      // Near miss indicator
+      // Near miss
       if (st.nearMissTimer > 20) {
-        ctx.fillStyle = themeColors.accent1;
-        ctx.font = 'bold 14px system-ui, sans-serif';
+        ctx.fillStyle = themeData.accentColor;
+        ctx.font = 'bold 13px system-ui, sans-serif';
         ctx.textAlign = 'center';
         ctx.globalAlpha = (st.nearMissTimer - 20) / 10;
-        ctx.fillText('CLOSE!', st.drone.x, st.drone.y - 30);
+        ctx.fillText('CLOSE!', st.duck.x, st.duck.y - 28);
         ctx.globalAlpha = 1;
-      }
-
-      // Score pop
-      if (st.scorePopTimer > 10) {
-        const scale = 1 + (st.scorePopTimer - 10) * 0.02;
-        ctx.save();
-        ctx.translate(w / 2, 50);
-        ctx.scale(scale, scale);
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 36px system-ui, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(st.score.toString(), 0, 0);
-        ctx.restore();
       }
 
       ctx.restore();
@@ -245,7 +248,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
 
     animRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animRef.current);
-  }, [playing, started, difficulty, theme, soundEnabled, themeColors, onScore, onDeath, onAchievementCheck]);
+  }, [playing, started, difficulty, theme, skin, soundEnabled, themeData, skinData, onScore, onDeath, onLevelComplete, onAchievementCheck]);
 
   const handleTouch = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
