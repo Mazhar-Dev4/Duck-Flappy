@@ -31,14 +31,14 @@ const AchievementToast: React.FC<AchievementToastProps> = ({ achievement, onDone
       }}>
       <div className="flex items-center gap-3 px-5 py-3 rounded-2xl border"
         style={{
-          background: 'linear-gradient(135deg, rgba(15,15,40,0.95), rgba(124,77,255,0.15))',
-          borderColor: 'rgba(124,77,255,0.3)',
-          boxShadow: '0 0 30px rgba(124,77,255,0.2)',
+          background: 'linear-gradient(135deg, rgba(15,15,40,0.95), rgba(168,85,247,0.15))',
+          borderColor: 'rgba(168,85,247,0.3)',
+          boxShadow: '0 0 25px rgba(168,85,247,0.2)',
         }}>
         <span className="text-2xl">{achievement.icon}</span>
         <div>
           <div className="text-xs font-bold tracking-wider uppercase"
-            style={{ color: '#7c4dff' }}>Achievement Unlocked</div>
+            style={{ color: '#a855f7' }}>Achievement Unlocked</div>
           <div className="text-sm font-medium" style={{ color: '#e0e0ff' }}>
             {achievement.title}
           </div>
