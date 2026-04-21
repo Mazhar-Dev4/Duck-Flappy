@@ -1,3 +1,5 @@
+Updated Project Description
+
 # 🦆 Flappy Duck Game
 
 ## 🌐 Live Demo
